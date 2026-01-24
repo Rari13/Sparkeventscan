@@ -336,7 +336,14 @@ export default function Scanner() {
         </div>
       </div>
 
-      {/* Camera Permission Request */}
+      {/* Camera Permission Screens */}
+      {cameraPermission === 'prompt' && !manualMode && (
+        <CameraPermissionRequest
+          onGrant={requestCameraPermission}
+          onManualMode={() => setManualMode(true)}
+        />
+      )}
+
       {cameraPermission === 'denied' && !manualMode && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-[#0A0A0A]">
           <motion.div
