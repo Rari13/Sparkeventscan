@@ -46,13 +46,14 @@ export default function Scanner() {
   }, [eventId]);
 
   useEffect(() => {
-    if (event && !manualMode) {
+    // Don't auto-start camera, wait for user permission
+    if (event && !manualMode && cameraPermission === 'granted') {
       startCamera();
     }
     return () => {
       if (!manualMode) stopCamera();
     };
-  }, [event, manualMode]);
+  }, [event, manualMode, cameraPermission]);
 
   const loadData = async () => {
     try {
