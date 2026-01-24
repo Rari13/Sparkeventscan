@@ -8,6 +8,7 @@ import jsQR from 'jsqr';
 import ScanFeedback from '@/components/scanner/ScanFeedback';
 import ScannerViewfinder from '@/components/scanner/ScannerViewfinder';
 import StatsBar from '@/components/scanner/StatsBar';
+import CameraPermissionRequest from '@/components/scanner/CameraPermissionRequest';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
