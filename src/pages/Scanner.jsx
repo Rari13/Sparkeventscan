@@ -24,6 +24,7 @@ export default function Scanner() {
   const [manualCode, setManualCode] = useState('');
   const [processing, setProcessing] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState('prompt'); // 'prompt', 'granted', 'denied'
   const [localTickets, setLocalTickets] = useState([]);
   
   const videoRef = useRef(null);
