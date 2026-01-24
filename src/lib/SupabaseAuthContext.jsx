@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase, getOrganizerProfile } from './supabase';
+import { supabase } from './supabase';
 
 const SupabaseAuthContext = createContext(null);
 
@@ -13,6 +13,7 @@ export const useSupabaseAuth = () => {
 
 export const SupabaseAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [organizer, setOrganizer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,9 +27,10 @@ export const SupabaseAuthProvider = ({ children }) => {
       console.log('[Auth] Event:', event);
       if (session?.user) {
         setUser(session.user);
-        await loadOrganizerProfile(session.user.id);
+        await loadUserRole(session.user.id);
       } else {
         setUser(null);
+        setUserRole(null);
         setOrganizer(null);
       }
       setLoading(false);
@@ -44,7 +46,7 @@ export const SupabaseAuthProvider = ({ children }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        await loadOrganizerProfile(session.user.id);
+        await loadUserRole(session.user.id);
       }
     } catch (err) {
       console.error('[Auth] Session check error:', err);
@@ -54,13 +56,46 @@ export const SupabaseAuthProvider = ({ children }) => {
     }
   };
 
-  const loadOrganizerProfile = async (userId) => {
+  const loadUserRole = async (userId) => {
     try {
-      const profile = await getOrganizerProfile(userId);
-      setOrganizer(profile);
+      // Charger le rôle de l'utilisateur depuis user_roles
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+      
+      if (roleError) {
+        console.error('[Auth] Role lookup error:', roleError);
+        setUserRole(null);
+        setOrganizer(null);
+        return;
+      }
+
+      setUserRole(roleData?.role);
+      console.log('[Auth] User role:', roleData?.role);
+
+      // Si c'est un organisateur ou scan_agent, charger le profil organisateur
+      if (roleData?.role === 'organizer' || roleData?.role === 'scan_agent') {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizers')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        
+        if (!orgError && orgData) {
+          setOrganizer(orgData);
+          console.log('[Auth] Organizer profile loaded:', orgData.company_name);
+        } else {
+          console.log('[Auth] No organizer profile found');
+          setOrganizer(null);
+        }
+      } else {
+        setOrganizer(null);
+      }
     } catch (err) {
-      console.error('[Auth] Organizer profile error:', err);
-      // L'utilisateur n'est peut-être pas un organisateur
+      console.error('[Auth] Load user role error:', err);
+      setUserRole(null);
       setOrganizer(null);
     }
   };
@@ -83,11 +118,32 @@ export const SupabaseAuthProvider = ({ children }) => {
     }
   };
 
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/',
+        }
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     setLoading(true);
     try {
       await supabase.auth.signOut();
       setUser(null);
+      setUserRole(null);
       setOrganizer(null);
     } catch (err) {
       console.error('[Auth] Sign out error:', err);
@@ -96,15 +152,22 @@ export const SupabaseAuthProvider = ({ children }) => {
     }
   };
 
+  // Vérifier si l'utilisateur peut scanner (organizer ou scan_agent)
+  const canScan = userRole === 'organizer' || userRole === 'scan_agent';
+
   const value = {
     user,
+    userRole,
     organizer,
     loading,
     error,
     signIn,
+    signInWithGoogle,
     signOut,
     isAuthenticated: !!user,
-    isOrganizer: !!organizer,
+    isOrganizer: userRole === 'organizer',
+    isScanAgent: userRole === 'scan_agent',
+    canScan,
   };
 
   return (
