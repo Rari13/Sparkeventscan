@@ -33,6 +33,20 @@ export default function ScanFeedback({ result, ticketInfo, onClose }) {
       title: 'Mauvais événement',
       subtitle: 'Ce billet appartient à un autre événement',
       iconBg: 'bg-white/20'
+    },
+    cancelled: {
+      bg: 'from-gray-600 to-gray-700',
+      icon: X,
+      title: 'Billet annulé',
+      subtitle: 'Ce billet a été annulé ou remboursé',
+      iconBg: 'bg-white/20'
+    },
+    update_failed: {
+      bg: 'from-red-600 to-red-700',
+      icon: AlertTriangle,
+      title: 'Erreur',
+      subtitle: 'Impossible de valider le billet',
+      iconBg: 'bg-white/20'
     }
   };
 

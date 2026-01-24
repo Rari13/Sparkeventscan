@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSupabaseAuth } from '@/lib/SupabaseAuthContext';
+import { supabase, validateTicket, getEventStats } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Flashlight, FlashlightOff, History, BarChart3, Keyboard, Camera, Zap, Video } from 'lucide-react';
 import jsQR from 'jsqr';
@@ -13,8 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export default function Scanner() {
+  const [searchParams] = useSearchParams();
+  const eventId = searchParams.get('eventId');
+  
   const [event, setEvent] = useState(null);
-  const [user, setUser] = useState(null);
   const [scanning, setScanning] = useState(true);
   const [torchOn, setTorchOn] = useState(false);
   const [scanResult, setScanResult] = useState(null);
@@ -25,8 +27,7 @@ export default function Scanner() {
   const [manualCode, setManualCode] = useState('');
   const [processing, setProcessing] = useState(false);
   const [cameraError, setCameraError] = useState(false);
-  const [cameraPermission, setCameraPermission] = useState('prompt'); // 'prompt', 'granted', 'denied'
-  const [localTickets, setLocalTickets] = useState([]);
+  const [cameraPermission, setCameraPermission] = useState('prompt');
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -34,19 +35,16 @@ export default function Scanner() {
   const scanIntervalRef = useRef(null);
   const lastScannedRef = useRef(null);
   const navigate = useNavigate();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const eventId = urlParams.get('eventId');
+  const { user } = useSupabaseAuth();
 
   useEffect(() => {
-    loadData();
+    loadEventData();
     return () => {
       stopCamera();
     };
   }, [eventId]);
 
   useEffect(() => {
-    // Don't auto-start camera, wait for user permission
     if (event && !manualMode && cameraPermission === 'granted') {
       startCamera();
     }
@@ -55,29 +53,29 @@ export default function Scanner() {
     };
   }, [event, manualMode, cameraPermission]);
 
-  const loadData = async () => {
+  const loadEventData = async () => {
+    if (!eventId) return;
+    
     try {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-
-      if (eventId) {
-        const events = await base44.entities.Event.filter({ id: eventId });
-        if (events.length > 0) {
-          const evt = events[0];
-          setEvent(evt);
-          setStats({
-            total: evt.total_tickets || 0,
-            scanned: evt.scanned_tickets || 0,
-            errors: 0
-          });
-          
-          // Load tickets for this event (for offline mode)
-          const tickets = await base44.entities.Ticket.filter({ event_id: eventId });
-          setLocalTickets(tickets);
-        }
-      }
+      // Charger l'événement
+      const { data: eventData, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single();
+      
+      if (error) throw error;
+      setEvent(eventData);
+      
+      // Charger les stats
+      const eventStats = await getEventStats(eventId);
+      setStats({
+        total: eventStats.total,
+        scanned: eventStats.scanned,
+        errors: 0
+      });
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading event:', error);
     }
   };
 
@@ -173,101 +171,40 @@ export default function Scanner() {
     }
   };
 
-  const processTicket = async (code) => {
-    if (processing || !code) return;
-    if (lastScannedRef.current === code) return; // Prevent double scan
+  const processTicket = async (qrToken) => {
+    if (processing || !qrToken) return;
+    if (lastScannedRef.current === qrToken) return;
     
     setProcessing(true);
-    lastScannedRef.current = code;
+    lastScannedRef.current = qrToken;
     
     try {
-      // Find ticket in local cache first
-      let ticket = localTickets.find(t => t.ticket_code === code);
+      // Valider le billet via Supabase
+      const result = await validateTicket(qrToken, eventId);
       
-      if (!ticket) {
-        // Try to fetch from server
-        const tickets = await base44.entities.Ticket.filter({ ticket_code: code });
-        ticket = tickets[0];
-      }
-      
-      if (!ticket) {
-        setScanResult('invalid');
-        setTicketInfo(null);
+      if (result.success) {
+        setScanResult('success');
+        setTicketInfo(result.ticket);
+        setStats(prev => ({ ...prev, scanned: prev.scanned + 1 }));
+        
+        // Vibration feedback
+        if (navigator.vibrate) {
+          navigator.vibrate(100);
+        }
+      } else {
+        setScanResult(result.error);
+        setTicketInfo(result.ticket || null);
         setStats(prev => ({ ...prev, errors: prev.errors + 1 }));
         
-        // Log the scan attempt
-        await base44.entities.ScanLog.create({
-          event_id: eventId,
-          ticket_code: code,
-          result: 'invalid',
-          scanned_by: user?.email
-        });
-        return;
+        // Vibration d'erreur
+        if (navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]);
+        }
       }
-      
-      if (ticket.event_id !== eventId) {
-        setScanResult('wrong_event');
-        setTicketInfo(ticket);
-        setStats(prev => ({ ...prev, errors: prev.errors + 1 }));
-        
-        await base44.entities.ScanLog.create({
-          event_id: eventId,
-          ticket_id: ticket.id,
-          ticket_code: code,
-          result: 'wrong_event',
-          scanned_by: user?.email
-        });
-        return;
-      }
-      
-      if (ticket.status === 'scanned') {
-        setScanResult('already_scanned');
-        setTicketInfo(ticket);
-        setStats(prev => ({ ...prev, errors: prev.errors + 1 }));
-        
-        await base44.entities.ScanLog.create({
-          event_id: eventId,
-          ticket_id: ticket.id,
-          ticket_code: code,
-          result: 'already_scanned',
-          scanned_by: user?.email
-        });
-        return;
-      }
-      
-      // Valid ticket - update status
-      await base44.entities.Ticket.update(ticket.id, {
-        status: 'scanned',
-        scanned_at: new Date().toISOString(),
-        scanned_by: user?.email
-      });
-      
-      // Update event stats
-      await base44.entities.Event.update(eventId, {
-        scanned_tickets: (event.scanned_tickets || 0) + 1
-      });
-      
-      // Log successful scan
-      await base44.entities.ScanLog.create({
-        event_id: eventId,
-        ticket_id: ticket.id,
-        ticket_code: code,
-        result: 'success',
-        scanned_by: user?.email
-      });
-      
-      // Update local state
-      setLocalTickets(prev => 
-        prev.map(t => t.id === ticket.id ? { ...t, status: 'scanned' } : t)
-      );
-      
-      setStats(prev => ({ ...prev, scanned: prev.scanned + 1 }));
-      setScanResult('success');
-      setTicketInfo(ticket);
-      
     } catch (error) {
       console.error('Scan error:', error);
       setScanResult('invalid');
+      setStats(prev => ({ ...prev, errors: prev.errors + 1 }));
     } finally {
       setProcessing(false);
       setTimeout(() => {
@@ -291,11 +228,11 @@ export default function Scanner() {
   };
 
   const goBack = () => {
-    navigate(createPageUrl('EventSelection'));
+    navigate('/');
   };
 
   const goToHistory = () => {
-    navigate(createPageUrl('ScanHistory') + `?eventId=${eventId}`);
+    navigate(`/ScanHistory?eventId=${eventId}`);
   };
 
   if (!event) {
@@ -356,7 +293,7 @@ export default function Scanner() {
             </div>
             <h2 className="text-xl font-semibold mb-3 text-gray-900">Accès caméra refusé</h2>
             <p className="text-gray-600 text-sm mb-6">
-              Pour scanner les QR codes, vous devez autoriser l'accès à la caméra dans les paramètres de votre navigateur.
+              Pour scanner les QR codes, vous devez autoriser l'accès à la caméra dans les paramètres.
             </p>
             <Button
               onClick={() => setManualMode(true)}
@@ -381,13 +318,10 @@ export default function Scanner() {
             />
             <canvas ref={canvasRef} className="hidden" />
             
-            {/* Overlay */}
             <div className="absolute inset-0 bg-black/40" />
             
-            {/* Viewfinder */}
             <ScannerViewfinder scanning={scanning && !processing} />
             
-            {/* Camera controls */}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent">
               <div className="flex items-center justify-center gap-4 mb-4">
                 <motion.button
@@ -448,7 +382,7 @@ export default function Scanner() {
                 <Input
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
-                  placeholder="Code du billet (UUID)"
+                  placeholder="Code du billet (QR Token)"
                   className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 h-14 text-center text-lg font-mono"
                   autoFocus
                 />

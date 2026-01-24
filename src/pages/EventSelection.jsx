@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { useSupabaseAuth } from '@/lib/SupabaseAuthContext';
+import { getOrganizerEvents, getEventStats } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar, MapPin, Users, ChevronRight, RefreshCw, LogOut, QrCode } from 'lucide-react';
@@ -10,22 +10,33 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EventSelection() {
   const [events, setEvents] = useState([]);
+  const [eventStats, setEventStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [user, setUser] = useState(null);
+  const { user, organizer, signOut } = useSupabaseAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (organizer) {
+      loadData();
+    }
+  }, [organizer]);
 
   const loadData = async () => {
     try {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      
-      const allEvents = await base44.entities.Event.filter({ organizer_id: currentUser.email });
+      const allEvents = await getOrganizerEvents(organizer.id);
       setEvents(allEvents);
+      
+      // Charger les stats pour chaque événement
+      const stats = {};
+      for (const event of allEvents) {
+        try {
+          stats[event.id] = await getEventStats(event.id);
+        } catch (err) {
+          stats[event.id] = { total: 0, scanned: 0, valid: 0 };
+        }
+      }
+      setEventStats(stats);
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {
@@ -40,11 +51,12 @@ export default function EventSelection() {
   };
 
   const selectEvent = (event) => {
-    navigate(createPageUrl('Scanner') + `?eventId=${event.id}`);
+    navigate(`/Scanner?eventId=${event.id}`);
   };
 
-  const handleLogout = () => {
-    base44.auth.logout();
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/Login');
   };
 
   return (
@@ -57,8 +69,8 @@ export default function EventSelection() {
               <QrCode className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">TicketScan</h1>
-              <p className="text-xs text-gray-500">{user?.full_name || user?.email}</p>
+              <h1 className="text-lg font-semibold text-gray-900">ScanSparkEvents</h1>
+              <p className="text-xs text-gray-500">{user?.email}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -107,74 +119,77 @@ export default function EventSelection() {
               <Calendar className="w-10 h-10 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium mb-2 text-gray-900">Aucun événement</h3>
-            <p className="text-gray-500 text-sm">Créez un événement sur votre plateforme pour commencer</p>
+            <p className="text-gray-500 text-sm">Créez un événement sur SparkEvents pour commencer</p>
           </motion.div>
         ) : (
           <AnimatePresence>
             <div className="space-y-3">
-              {events.map((event, index) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => selectEvent(event)}
-                  className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg mb-2 truncate text-gray-900">{event.title}</h3>
-                      
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-gray-600 text-sm">
-                          <Calendar className="w-4 h-4 flex-shrink-0" />
-                          <span>
-                            {format(new Date(event.date), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
-                          </span>
-                        </div>
+              {events.map((event, index) => {
+                const stats = eventStats[event.id] || { total: 0, scanned: 0 };
+                return (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => selectEvent(event)}
+                    className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg mb-2 truncate text-gray-900">{event.title}</h3>
                         
-                        {event.venue && (
+                        <div className="space-y-1.5">
                           <div className="flex items-center gap-2 text-gray-600 text-sm">
-                            <MapPin className="w-4 h-4 flex-shrink-0" />
-                            <span className="truncate">{event.venue}</span>
+                            <Calendar className="w-4 h-4 flex-shrink-0" />
+                            <span>
+                              {format(new Date(event.starts_at), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                            </span>
                           </div>
-                        )}
-                        
-                        <div className="flex items-center gap-2 text-gray-600 text-sm">
-                          <Users className="w-4 h-4 flex-shrink-0" />
-                          <span>
-                            <span className="text-[#8B7FE8] font-medium">{event.scanned_tickets || 0}</span>
-                            <span className="text-gray-400"> / </span>
-                            <span>{event.total_tickets || 0}</span>
-                            <span className="text-gray-400"> scannés</span>
-                          </span>
+                          
+                          {event.venue && (
+                            <div className="flex items-center gap-2 text-gray-600 text-sm">
+                              <MapPin className="w-4 h-4 flex-shrink-0" />
+                              <span className="truncate">{event.venue}, {event.city}</span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 text-gray-600 text-sm">
+                            <Users className="w-4 h-4 flex-shrink-0" />
+                            <span>
+                              <span className="text-[#8B7FE8] font-medium">{stats.scanned}</span>
+                              <span className="text-gray-400"> / </span>
+                              <span>{stats.total}</span>
+                              <span className="text-gray-400"> scannés</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="ml-4 flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#8B7FE8]/10 flex items-center justify-center">
+                          <ChevronRight className="w-5 h-5 text-[#8B7FE8]" />
                         </div>
                       </div>
                     </div>
                     
-                    <div className="ml-4 flex-shrink-0">
-                      <div className="w-10 h-10 rounded-xl bg-[#8B7FE8]/10 flex items-center justify-center">
-                        <ChevronRight className="w-5 h-5 text-[#8B7FE8]" />
+                    {/* Progress bar */}
+                    <div className="mt-4">
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ 
+                            width: `${stats.total ? (stats.scanned / stats.total) * 100 : 0}%` 
+                          }}
+                          transition={{ duration: 0.5, delay: index * 0.05 + 0.2 }}
+                          className="h-full bg-gradient-to-r from-[#8B7FE8] to-[#7B6FD8] rounded-full"
+                        />
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Progress bar */}
-                  <div className="mt-4">
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ 
-                          width: `${event.total_tickets ? (event.scanned_tickets / event.total_tickets) * 100 : 0}%` 
-                        }}
-                        transition={{ duration: 0.5, delay: index * 0.05 + 0.2 }}
-                        className="h-full bg-gradient-to-r from-[#8B7FE8] to-[#7B6FD8] rounded-full"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           </AnimatePresence>
         )}
