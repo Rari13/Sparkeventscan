@@ -466,7 +466,7 @@ export default function Scanner() {
                 </Button>
               </form>
               
-              {!cameraError && (
+              {!cameraError && cameraPermission === 'granted' && (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setManualMode(false)}
@@ -474,6 +474,17 @@ export default function Scanner() {
                 >
                   <Camera className="w-5 h-5" />
                   Retour au scanner
+                </motion.button>
+              )}
+              
+              {cameraPermission === 'prompt' && (
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={requestCameraPermission}
+                  className="w-full mt-4 py-3 text-white/60 hover:text-white transition-colors flex items-center justify-center gap-2"
+                >
+                  <Video className="w-5 h-5" />
+                  Activer le scanner caméra
                 </motion.button>
               )}
             </motion.div>
