@@ -334,6 +334,31 @@ export default function Scanner() {
         </div>
       </div>
 
+      {/* Camera Permission Request */}
+      {cameraPermission === 'denied' && !manualMode && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-[#0A0A0A]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center max-w-sm"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+              <Video className="w-10 h-10 text-red-400" />
+            </div>
+            <h2 className="text-xl font-semibold mb-3">Accès caméra refusé</h2>
+            <p className="text-white/60 text-sm mb-6">
+              Pour scanner les QR codes, vous devez autoriser l'accès à la caméra dans les paramètres de votre navigateur.
+            </p>
+            <Button
+              onClick={() => setManualMode(true)}
+              className="w-full bg-violet-600 hover:bg-violet-700"
+            >
+              Utiliser la saisie manuelle
+            </Button>
+          </motion.div>
+        </div>
+      )}
+
       {/* Camera / Manual Input */}
       <div className="flex-1 relative">
         {!manualMode ? (
