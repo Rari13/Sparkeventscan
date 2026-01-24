@@ -128,19 +128,29 @@ export default function Scanner() {
     if (scanIntervalRef.current) return;
     
     scanIntervalRef.current = setInterval(() => {
-      if (videoRef.current && canvasRef.current && !processing) {
+      if (videoRef.current && canvasRef.current && !processing && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
         
-        // Simple QR detection simulation - in production you'd use a library
-        // For now, we'll rely on manual input or integrate jsQR
+        if (canvas.width > 0 && canvas.height > 0) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'dontInvert',
+          });
+          
+          if (code && code.data) {
+            setScanning(false);
+            processTicket(code.data);
+          }
+        }
       }
-    }, 100);
+    }, 150);
   };
 
   const toggleTorch = async () => {
