@@ -79,29 +79,38 @@ export default function Scanner() {
     }
   };
 
-  const startCamera = async () => {
+  const requestCameraPermission = async () => {
     try {
+      setCameraPermission('prompt');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         }
       });
       
+      setCameraPermission('granted');
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        await videoRef.current.play();
       }
       
       setCameraError(false);
       startScanning();
     } catch (error) {
       console.error('Camera error:', error);
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setCameraPermission('denied');
+      }
       setCameraError(true);
       setManualMode(true);
     }
+  };
+
+  const startCamera = async () => {
+    await requestCameraPermission();
   };
 
   const stopCamera = () => {
