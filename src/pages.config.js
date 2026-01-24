@@ -1,14 +1,14 @@
 import EventSelection from './pages/EventSelection';
-import Scanner from './pages/Scanner';
-import ScanHistory from './pages/ScanHistory';
 import Home from './pages/Home';
+import ScanHistory from './pages/ScanHistory';
+import Scanner from './pages/Scanner';
 
 
 export const PAGES = {
     "EventSelection": EventSelection,
-    "Scanner": Scanner,
-    "ScanHistory": ScanHistory,
     "Home": Home,
+    "ScanHistory": ScanHistory,
+    "Scanner": Scanner,
 }
 
 export const pagesConfig = {
