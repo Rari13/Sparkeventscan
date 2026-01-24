@@ -370,13 +370,14 @@ export default function Scanner() {
 
       {/* Camera / Manual Input */}
       <div className="flex-1 relative">
-        {!manualMode ? (
+        {!manualMode && cameraPermission === 'granted' ? (
           <>
             <video
               ref={videoRef}
               className="absolute inset-0 w-full h-full object-cover"
               playsInline
               muted
+              autoPlay
             />
             <canvas ref={canvasRef} className="hidden" />
             
