@@ -285,6 +285,7 @@ export default function Scanner() {
   const closeFeedback = () => {
     setScanResult(null);
     setTicketInfo(null);
+    setScanning(true);
   };
 
   const goBack = () => {
