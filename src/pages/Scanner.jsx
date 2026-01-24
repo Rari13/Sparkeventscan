@@ -300,37 +300,37 @@ export default function Scanner() {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="animate-pulse text-white/50">Chargement...</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-pulse text-gray-500">Chargement...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
       {/* Header */}
-      <div className="relative z-20 bg-gradient-to-b from-black/80 to-transparent">
+      <div className="relative z-20 bg-white/95 backdrop-blur-xl border-b border-gray-200">
         <div className="px-4 py-4 flex items-center justify-between">
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={goBack}
-            className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center"
+            className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
           </motion.button>
           
           <div className="text-center flex-1 px-4">
-            <h1 className="font-semibold truncate">{event.title}</h1>
-            <p className="text-xs text-white/50">{stats.scanned} / {stats.total} scannés</p>
+            <h1 className="font-semibold truncate text-gray-900">{event.title}</h1>
+            <p className="text-xs text-gray-500">{stats.scanned} / {stats.total} scannés</p>
           </div>
           
           <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={goToHistory}
-              className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
             >
-              <History className="w-5 h-5" />
+              <History className="w-5 h-5 text-gray-700" />
             </motion.button>
           </div>
         </div>
@@ -345,22 +345,22 @@ export default function Scanner() {
       )}
 
       {cameraPermission === 'denied' && !manualMode && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-[#0A0A0A]">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-gray-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="text-center max-w-sm"
           >
-            <div className="w-20 h-20 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-              <Video className="w-10 h-10 text-red-400" />
+            <div className="w-20 h-20 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
+              <Video className="w-10 h-10 text-red-500" />
             </div>
-            <h2 className="text-xl font-semibold mb-3">Accès caméra refusé</h2>
-            <p className="text-white/60 text-sm mb-6">
+            <h2 className="text-xl font-semibold mb-3 text-gray-900">Accès caméra refusé</h2>
+            <p className="text-gray-600 text-sm mb-6">
               Pour scanner les QR codes, vous devez autoriser l'accès à la caméra dans les paramètres de votre navigateur.
             </p>
             <Button
               onClick={() => setManualMode(true)}
-              className="w-full bg-violet-600 hover:bg-violet-700"
+              className="w-full bg-[#8B7FE8] hover:bg-[#7B6FD8]"
             >
               Utiliser la saisie manuelle
             </Button>
@@ -388,42 +388,42 @@ export default function Scanner() {
             <ScannerViewfinder scanning={scanning && !processing} />
             
             {/* Camera controls */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent">
               <div className="flex items-center justify-center gap-4 mb-4">
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={toggleTorch}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
-                    torchOn ? 'bg-yellow-500' : 'bg-white/10 backdrop-blur-xl'
+                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg ${
+                    torchOn ? 'bg-yellow-400' : 'bg-white border-2 border-gray-200'
                   }`}
                 >
                   {torchOn ? (
-                    <Flashlight className="w-6 h-6 text-black" />
+                    <Flashlight className="w-6 h-6 text-white" />
                   ) : (
-                    <FlashlightOff className="w-6 h-6" />
+                    <FlashlightOff className="w-6 h-6 text-gray-700" />
                   )}
                 </motion.button>
                 
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setManualMode(true)}
-                  className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center"
+                  className="w-14 h-14 rounded-full bg-white border-2 border-gray-200 shadow-lg flex items-center justify-center"
                 >
-                  <Keyboard className="w-6 h-6" />
+                  <Keyboard className="w-6 h-6 text-gray-700" />
                 </motion.button>
                 
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowStats(!showStats)}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
-                    showStats ? 'bg-violet-600' : 'bg-white/10 backdrop-blur-xl'
+                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg ${
+                    showStats ? 'bg-[#8B7FE8]' : 'bg-white border-2 border-gray-200'
                   }`}
                 >
-                  <BarChart3 className="w-6 h-6" />
+                  <BarChart3 className={`w-6 h-6 ${showStats ? 'text-white' : 'text-gray-700'}`} />
                 </motion.button>
               </div>
               
-              <p className="text-center text-white/60 text-sm">
+              <p className="text-center text-gray-600 text-sm">
                 Pointez la caméra vers le QR code
               </p>
             </div>
@@ -435,28 +435,28 @@ export default function Scanner() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-sm"
             >
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center mx-auto mb-6">
-                <Keyboard className="w-10 h-10" />
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#8B7FE8] to-[#7B6FD8] flex items-center justify-center mx-auto mb-6">
+                <Keyboard className="w-10 h-10 text-white" />
               </div>
-              
-              <h2 className="text-xl font-semibold text-center mb-2">Saisie manuelle</h2>
-              <p className="text-white/50 text-center text-sm mb-6">
+
+              <h2 className="text-xl font-semibold text-center mb-2 text-gray-900">Saisie manuelle</h2>
+              <p className="text-gray-500 text-center text-sm mb-6">
                 Entrez le code du billet manuellement
               </p>
-              
+
               <form onSubmit={handleManualSubmit} className="space-y-4">
                 <Input
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   placeholder="Code du billet (UUID)"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 h-14 text-center text-lg font-mono"
+                  className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 h-14 text-center text-lg font-mono"
                   autoFocus
                 />
-                
+
                 <Button
                   type="submit"
                   disabled={!manualCode.trim() || processing}
-                  className="w-full h-14 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-lg font-semibold"
+                  className="w-full h-14 bg-gradient-to-r from-[#8B7FE8] to-[#7B6FD8] hover:from-[#7B6FD8] hover:to-[#6B5FC8] text-lg font-semibold"
                 >
                   {processing ? (
                     <Zap className="w-5 h-5 animate-pulse" />
@@ -465,23 +465,23 @@ export default function Scanner() {
                   )}
                 </Button>
               </form>
-              
+
               {!cameraError && cameraPermission === 'granted' && (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setManualMode(false)}
-                  className="w-full mt-4 py-3 text-white/60 hover:text-white transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-3 text-gray-600 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
                 >
                   <Camera className="w-5 h-5" />
                   Retour au scanner
                 </motion.button>
               )}
-              
+
               {cameraPermission === 'prompt' && (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={requestCameraPermission}
-                  className="w-full mt-4 py-3 text-white/60 hover:text-white transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-3 text-gray-600 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
                 >
                   <Video className="w-5 h-5" />
                   Activer le scanner caméra
