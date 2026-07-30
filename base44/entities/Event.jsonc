@@ -1,0 +1,52 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titre de l'\u00e9v\u00e9nement"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date et heure de l'\u00e9v\u00e9nement"
+    },
+    "venue": {
+      "type": "string",
+      "description": "Lieu de l'\u00e9v\u00e9nement"
+    },
+    "cover_image": {
+      "type": "string",
+      "description": "Image de couverture"
+    },
+    "organizer_id": {
+      "type": "string",
+      "description": "ID de l'organisateur (email)"
+    },
+    "total_tickets": {
+      "type": "number",
+      "default": 0,
+      "description": "Nombre total de billets vendus"
+    },
+    "scanned_tickets": {
+      "type": "number",
+      "default": 0,
+      "description": "Nombre de billets scann\u00e9s"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "ongoing",
+        "completed"
+      ],
+      "default": "published"
+    }
+  },
+  "required": [
+    "title",
+    "date",
+    "organizer_id"
+  ]
+}

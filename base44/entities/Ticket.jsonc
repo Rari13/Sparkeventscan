@@ -1,0 +1,53 @@
+{
+  "name": "Ticket",
+  "type": "object",
+  "properties": {
+    "ticket_code": {
+      "type": "string",
+      "description": "Code unique du billet (UUID dans le QR code)"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "ID de l'\u00e9v\u00e9nement associ\u00e9"
+    },
+    "buyer_name": {
+      "type": "string",
+      "description": "Nom de l'acheteur"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Email de l'acheteur"
+    },
+    "ticket_type": {
+      "type": "string",
+      "description": "Type de billet (VIP, Standard, etc.)"
+    },
+    "price": {
+      "type": "number",
+      "description": "Prix du billet"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "valid",
+        "scanned",
+        "cancelled",
+        "expired"
+      ],
+      "default": "valid"
+    },
+    "scanned_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date et heure du scan"
+    },
+    "scanned_by": {
+      "type": "string",
+      "description": "Email de la personne qui a scann\u00e9"
+    }
+  },
+  "required": [
+    "ticket_code",
+    "event_id"
+  ]
+}
